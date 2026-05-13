@@ -1,5 +1,5 @@
 {
-  "name": "whatsapp-server",
+  "name": "whatsapp-yaf2",
   "version": "1.0.0",
   "description": "Server WhatsApp Cloud API per App Inventor",
   "main": "index.js",
@@ -13,7 +13,5 @@
     "node-fetch": "^3.3.2"
   }
 }
-
-
 
 
