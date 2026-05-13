@@ -1,70 +1,97 @@
-const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
-const express = require('express');
-const bodyParser = require('body-parser');
+const express = require("express");
+const bodyParser = require("body-parser");
+const axios = require("axios");
 
 const app = express();
 app.use(bodyParser.json());
 
-// Configurazione Cloud definitiva: disabilita l'avvio di Chrome locale
-// e scarica i componenti direttamente dal server web di WhatsApp
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    webVersionCache: {
-        type: 'remote',
-        remotePath: 'githubusercontent.com'
-    },
-    puppeteer: {
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--single-process',
-            '--disable-gpu'
-        ]
-    }
-});
+// Inserisci qui il tuo token WhatsApp Cloud API
+const WHATSAPP_TOKEN = "INSERISCI_IL_TUO_TOKEN";
+const PHONE_NUMBER_ID = "INSERISCI_PHONE_NUMBER_ID"; // es: 123456789000000
 
-client.on('qr', (qr) => {
-    console.log('SCANSIONA QUESTO CODICE CON WHATSAPP:');
-    qrcode.generate(qr, { small: true });
-});
-
-client.on('ready', () => {
-    console.log('WhatsApp è pronto a ricevere comandi da App Inventor!');
-});
-
-app.post('/invia-messaggio', async (req, res) => {
+// Endpoint per inviare messaggi
+app.post("/invia-messaggio", async (req, res) => {
     const { numero, testo, urlImmagine, urlAudio } = req.body;
-    if (!numero) return res.status(400).json({ successo: false, errore: 'Numero mancante' });
 
-    const chatId = `${numero}@c.us`;
+    if (!numero) {
+        return res.status(400).json({ successo: false, errore: "Numero mancante" });
+    }
+
+    const url = `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`;
 
     try {
-        if (urlAudio) {
-            const mediaAudio = await MessageMedia.fromUrl(urlAudio);
-            await client.sendMessage(chatId, mediaAudio, { sendAudioAsVoice: true });
-        } else if (urlImmagine) {
-            const mediaImmagine = await MessageMedia.fromUrl(urlImmagine);
-            await client.sendMessage(chatId, mediaImmagine, { caption: testo || '' });
-        } else if (testo) {
-            await client.sendMessage(chatId, testo);
+        // Messaggio testuale
+        if (testo) {
+            await axios.post(
+                url,
+                {
+                    messaging_product: "whatsapp",
+                    to: numero,
+                    type: "text",
+                    text: { body: testo }
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+                        "Content-Type": "application/json"
+                    }
+                }
+            );
         }
-        return res.status(200).json({ successo: true, messaggio: 'Inviato!' });
+
+        // Immagine
+        if (urlImmagine) {
+            await axios.post(
+                url,
+                {
+                    messaging_product: "whatsapp",
+                    to: numero,
+                    type: "image",
+                    image: { link: urlImmagine, caption: testo || "" }
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+                        "Content-Type": "application/json"
+                    }
+                }
+            );
+        }
+
+        // Audio
+        if (urlAudio) {
+            await axios.post(
+                url,
+                {
+                    messaging_product: "whatsapp",
+                    to: numero,
+                    type: "audio",
+                    audio: { link: urlAudio }
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+                        "Content-Type": "application/json"
+                    }
+                }
+            );
+        }
+
+        return res.json({ successo: true, messaggio: "Inviato!" });
+
     } catch (error) {
-        return res.status(500).json({ successo: false, errore: error.message });
+        return res.status(500).json({
+            successo: false,
+            errore: error.response?.data || error.message
+        });
     }
 });
 
+// Porta per Render
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server online sulla porta ${PORT}`);
+    console.log("Server WhatsApp Cloud API attivo su Render");
 });
 
-client.initialize();
 
 
