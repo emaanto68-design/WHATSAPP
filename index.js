@@ -1,85 +1,63 @@
 import express from "express";
-import fetch from "node-fetch";
+import axios from "axios";
 import cors from "cors";
 
 const app = express();
-
-// 🔥 AGGIUNGI QUESTE 3 RIGHE
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.text({ type: "*/*" }));
-
 app.use(cors());
 
-// Endpoint principale
+// App Inventor code2 invia SEMPRE text/plain
+app.use(express.text());
+app.use(express.urlencoded({ extended: true }));
+
+// Endpoint per inviare messaggi WhatsApp
 app.post("/invia", async (req, res) => {
   try {
-    const {
-      phoneId,
-      token,
-      numero,
-      testo,
-      urlImmagine,
-      urlAudio
-    } = req.body;
+    // Se arriva text/plain, convertiamolo in oggetto
+    let body = {};
 
-    if (!phoneId || !token || !numero) {
-      return res.json({
-        successo: false,
-        errore: "Parametri mancanti: phoneId, token o numero"
+    if (typeof req.body === "string") {
+      req.body.split("&").forEach(pair => {
+        const [key, value] = pair.split("=");
+        body[key] = decodeURIComponent(value);
       });
+    } else {
+      body = req.body;
     }
 
-    const url = `https://graph.facebook.com/v20.0/${phoneId}/messages`;
+    const { phoneId, token, numero, testo } = body;
 
-    let payload = {
+    // Costruzione JSON WhatsApp
+    const payload = {
       messaging_product: "whatsapp",
-      to: numero
+      to: numero,
+      type: "text",
+      text: { body: testo }
     };
 
-    if (testo) {
-      payload.type = "text";
-      payload.text = { body: testo };
-    }
+    // Invio a WhatsApp Cloud API
+    const risposta = await axios.post(
+      `https://graph.facebook.com/v20.0/${phoneId}/messages`,
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
 
-    if (urlImmagine) {
-      payload.type = "image";
-      payload.image = { link: urlImmagine };
-    }
-
-    if (urlAudio) {
-      payload.type = "audio";
-      payload.audio = { link: urlAudio };
-    }
-
-    const risposta = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const dati = await risposta.json();
-
-    res.json({
-      successo: !dati.error,
-      risposta: dati
-    });
+    res.json({ successo: true, risposta: risposta.data });
 
   } catch (errore) {
     res.json({
       successo: false,
-      errore: errore.message
+      risposta: errore.response?.data || errore.message
     });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("Server attivo su porta " + PORT);
-});
+app.listen(3000, () => console.log("Server avviato"));
+
 
 
 
