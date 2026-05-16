@@ -1,18 +1,19 @@
 {
-  "name": "whatsapp-yaf2",
+  "name": "whatsapp-server",
   "version": "1.0.0",
-  "description": "Server WhatsApp Cloud API per App Inventor",
+  "description": "Server per inviare messaggi WhatsApp tramite Cloud API",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "axios": "^1.6.7",
     "cors": "^2.8.5",
-    "axios": "^1.6.7"
+    "express": "^4.18.2"
   }
 }
+
 
 
 
