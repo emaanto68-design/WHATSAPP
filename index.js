@@ -3,7 +3,12 @@ import fetch from "node-fetch";
 import cors from "cors";
 
 const app = express();
+
+// 🔥 AGGIUNGI QUESTE 3 RIGHE
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.text({ type: "*/*" }));
+
 app.use(cors());
 
 // Endpoint principale
@@ -18,7 +23,6 @@ app.post("/invia", async (req, res) => {
       urlAudio
     } = req.body;
 
-    // Controllo parametri obbligatori
     if (!phoneId || !token || !numero) {
       return res.json({
         successo: false,
@@ -26,10 +30,8 @@ app.post("/invia", async (req, res) => {
       });
     }
 
-    // URL WhatsApp Cloud API
     const url = `https://graph.facebook.com/v20.0/${phoneId}/messages`;
 
-    // Costruzione payload dinamico
     let payload = {
       messaging_product: "whatsapp",
       to: numero
@@ -50,7 +52,6 @@ app.post("/invia", async (req, res) => {
       payload.audio = { link: urlAudio };
     }
 
-    // Invio a WhatsApp Cloud API
     const risposta = await fetch(url, {
       method: "POST",
       headers: {
@@ -62,7 +63,6 @@ app.post("/invia", async (req, res) => {
 
     const dati = await risposta.json();
 
-    // Risposta al client
     res.json({
       successo: !dati.error,
       risposta: dati
@@ -76,11 +76,11 @@ app.post("/invia", async (req, res) => {
   }
 });
 
-// Avvio server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server attivo su porta " + PORT);
 });
+
 
 
 
