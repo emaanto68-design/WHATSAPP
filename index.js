@@ -11,6 +11,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Endpoint per inviare messaggi WhatsApp
 app.post("/invia", async (req, res) => {
+  console.log("BODY RICEVUTO:", body);
+console.log("PHONEID:", phoneId);
+
   try {
     // Se arriva text/plain, convertiamolo in oggetto
     let body = {};
