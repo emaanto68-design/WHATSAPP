@@ -1,5 +1,3 @@
-
-
 import express from "express";
 import axios from "axios";
 import cors from "cors";
@@ -15,7 +13,7 @@ app.post("/invia", async (req, res) => {
   try {
     let body = {};
 
-    // Se arriva text/plain, convertiamolo in oggetto
+    // Convertiamo text/plain in oggetto
     if (typeof req.body === "string") {
       req.body.split("&").forEach(pair => {
         const [key, value] = pair.split("=");
@@ -25,36 +23,59 @@ app.post("/invia", async (req, res) => {
       body = req.body;
     }
 
-    // LOG per capire cosa arriva davvero
     console.log("BODY RICEVUTO:", body);
-    console.log("PHONEID RAW:", body.phoneId);
 
     const phoneId = (body.phoneId || "").trim();
     const token = (body.token || "").trim();
     const numero = (body.numero || "").trim();
     const testo = (body.testo || "").trim();
+    const template = (body.template || "").trim();
+    const lingua = (body.lingua || "en_US").trim();
 
-    console.log("PHONEID PULITO:", phoneId);
-
-    // Controlli minimi
-    if (!phoneId || !token || !numero || !testo) {
+    if (!phoneId || !token || !numero) {
       return res.json({
         successo: false,
-        risposta: "Parametri mancanti: phoneId, token, numero, testo"
+        risposta: "Parametri mancanti: phoneId, token, numero"
       });
     }
 
-    // Payload WhatsApp
-    const payload = {
-      messaging_product: "whatsapp",
-      to: numero,
-      type: "text",
-      text: { body: testo }
-    };
+    let payload = {};
 
-    // Invio a WhatsApp Cloud API
+    // 🔵 TEMPLATE MESSAGE
+    if (template) {
+      payload = {
+        messaging_product: "whatsapp",
+        to: numero,
+        type: "template",
+        template: {
+          name: template,
+          language: { code: lingua }
+        }
+      };
+    }
+
+    // 🟢 NORMAL TEXT MESSAGE
+    else if (testo) {
+      payload = {
+        messaging_product: "whatsapp",
+        to: numero,
+        type: "text",
+        text: { body: testo }
+      };
+    }
+
+    // ❌ Nessun contenuto
+    else {
+      return res.json({
+        successo: false,
+        risposta: "Devi inviare testo= oppure template="
+      });
+    }
+
+    console.log("PAYLOAD INVIATO:", payload);
+
     const risposta = await axios.post(
-      `https://graph.facebook.com/v20.0/${phoneId}/messages`,
+      `https://graph.facebook.com/v25.0/${phoneId}/messages`,
       payload,
       {
         headers: {
@@ -77,3 +98,4 @@ app.post("/invia", async (req, res) => {
 });
 
 app.listen(3000, () => console.log("Server avviato su porta 3000"));
+
