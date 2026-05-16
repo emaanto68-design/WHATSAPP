@@ -1,3 +1,5 @@
+
+
 import express from "express";
 import axios from "axios";
 import cors from "cors";
@@ -5,20 +7,15 @@ import cors from "cors";
 const app = express();
 app.use(cors());
 
-// App Inventor code2 invia SEMPRE text/plain
+// App Inventor invia SEMPRE text/plain
 app.use(express.text());
 app.use(express.urlencoded({ extended: true }));
 
-// Endpoint per inviare messaggi WhatsApp
 app.post("/invia", async (req, res) => {
-console.log("BODY RICEVUTO:", body);
-console.log("PHONEID:", phoneId);
-
-
   try {
-    // Se arriva text/plain, convertiamolo in oggetto
     let body = {};
 
+    // Se arriva text/plain, convertiamolo in oggetto
     if (typeof req.body === "string") {
       req.body.split("&").forEach(pair => {
         const [key, value] = pair.split("=");
@@ -28,9 +25,26 @@ console.log("PHONEID:", phoneId);
       body = req.body;
     }
 
-    const { phoneId, token, numero, testo } = body;
+    // LOG per capire cosa arriva davvero
+    console.log("BODY RICEVUTO:", body);
+    console.log("PHONEID RAW:", body.phoneId);
 
-    // Costruzione JSON WhatsApp
+    const phoneId = (body.phoneId || "").trim();
+    const token = (body.token || "").trim();
+    const numero = (body.numero || "").trim();
+    const testo = (body.testo || "").trim();
+
+    console.log("PHONEID PULITO:", phoneId);
+
+    // Controlli minimi
+    if (!phoneId || !token || !numero || !testo) {
+      return res.json({
+        successo: false,
+        risposta: "Parametri mancanti: phoneId, token, numero, testo"
+      });
+    }
+
+    // Payload WhatsApp
     const payload = {
       messaging_product: "whatsapp",
       to: numero,
@@ -53,6 +67,8 @@ console.log("PHONEID:", phoneId);
     res.json({ successo: true, risposta: risposta.data });
 
   } catch (errore) {
+    console.log("ERRORE WHATSAPP:", errore.response?.data || errore.message);
+
     res.json({
       successo: false,
       risposta: errore.response?.data || errore.message
@@ -60,5 +76,4 @@ console.log("PHONEID:", phoneId);
   }
 });
 
-app.listen(3000, () => console.log("Server avviato"));
-
+app.listen(3000, () => console.log("Server avviato su porta 3000"));
